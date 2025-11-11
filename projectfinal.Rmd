@@ -1,0 +1,826 @@
+---
+title: "Final Project"
+output:
+  html_document: default
+  pdf_document: default
+date: "2025-11-09"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+if(!require(dplyr)) install.packages("dplyr") 
+
+if(!require(stringi)) install.packages("stringi") 
+
+if(!require(caTools)) install.packages("caTools") 
+
+ 
+
+library(readxl) 
+
+library(dplyr) 
+
+library(stringi) 
+
+library(caTools) 
+
+
+```{r}
+# Task 3
+
+data <- readxl::read_excel("C:\\Users\\Thinkpad\\Desktop\\final project\\StudentPerformanceFactors.xlsx")
+
+```
+
+```{r}
+# Task 4 and 6
+library(readxl)
+library(stringi)
+library(dplyr)
+
+# Read the Excel file
+data <- read_excel("C:/Users/Thinkpad/Desktop/final project/StudentPerformanceFactors.xlsx")
+# Check encoding for special characters
+stringi::stri_enc_detect(str(data))
+
+# Display first few rows to confirm accents
+View(data)
+
+# Count duplicated rows
+n_total <- nrow(data)
+n_duplicates <- sum(duplicated(data))
+cat("Total rows:", n_total, "\nDuplicated rows:", n_duplicates, "\n")
+
+# Remove duplicated rows
+data <- data[!duplicated(data), ]
+
+# Replace empty strings with NA
+data[data == ""] <- NA
+
+# Remove rows with any missing data
+data_clean <- na.omit(data)
+cat("Rows after removing missing data:", nrow(data_clean), "\n")
+
+
+
+```
+
+
+```{r}
+# Task 5 
+set.seed(123)
+
+n <- nrow(data_clean)
+
+train_indices <- sample(1:n, size = floor(2/3 * n))
+
+data.train <- data_clean[train_indices, ]
+data.test  <- data_clean[-train_indices, ]
+
+```
+
+```{r}
+# Task 7: 
+library(dplyr)
+
+# Use cleaned dataset
+data <- data_clean
+
+# Ignore StudentID as it is an identifier
+text_vars <- c("StudentID")
+
+# Music and Volunteering are binary → categorical
+data$Music <- factor(data$Music, levels = c(0, 1), labels = c("No", "Yes"))
+data$Volunteering <- factor(data$Volunteering, levels = c(0, 1), labels = c("No", "Yes"))
+
+# Position among siblings: ordinal
+data$`Position among siblings` <- factor(data$`Position among siblings`,
+                                         levels = 1:5,
+                                         labels = c("First", "Second", "Third", "Fourth", "Fifth"),
+                                         ordered = TRUE)
+
+# Continuous variables
+continuous_vars <- c("Age", "Absences", "Hours_Studied", "Attendance", 
+                     "Siblings", "Physical_Activity",
+                     "Sleep_Hours", "Previous_Scores",
+                     "Tutoring_Sessions", "Exam_Score")
+
+# Categorical variables
+categorical_vars <- c("Gender", "Distance_from_Home", "Access_to_Resources", 
+                      "Motivation_Level", "School_Type", "Peer_Influence",
+                      "Volunteering", "Learning_Disabilities", 
+                      "Parental_Education_Level", "Parental_Involvement", 
+                      "Teacher_Quality", "Family_Income", "Internet_Access",
+                      "Music",                        # 0/1 → "No"/"Yes"
+                      "`Position among siblings`", 
+                      "Extracurricular_Activities")   # Yes/No
+
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+# Task 8.1 Continuous variables
+output_folder <- "C:/Users/Thinkpad/Desktop/final project"
+
+for (var in continuous_vars) {
+  
+  # Summary statistics
+  summary_stats <- data_clean %>%
+    summarise(
+      Mean = mean(.data[[var]], na.rm = TRUE),
+      Median = median(.data[[var]], na.rm = TRUE),
+      SD = sd(.data[[var]], na.rm = TRUE),
+      Min = min(.data[[var]], na.rm = TRUE),
+      Max = max(.data[[var]], na.rm = TRUE)
+    )
+  
+  cat("==============================\n")
+  cat("Variable:", var, "\n")
+  cat("Mean:", round(summary_stats$Mean, 2), 
+      "| Median:", round(summary_stats$Median, 2), 
+      "| SD:", round(summary_stats$SD, 2), 
+      "| Min:", summary_stats$Min, 
+      "| Max:", summary_stats$Max, "\n")
+  cat("Observation: average", round(summary_stats$Mean, 2),
+      ", median", round(summary_stats$Median, 2),
+      ", SD", round(summary_stats$SD, 2),
+      ", range", summary_stats$Min, "to", summary_stats$Max, "\n")
+  
+  # Histogram
+  p_hist <- ggplot(data_clean, aes_string(x = var)) +
+    geom_histogram(fill = "steelblue", color = "black", bins = 30, na.rm = TRUE) +
+    theme_minimal() +
+    labs(title = paste("Distribution of", var), x = var, y = "Count")
+  
+  # Save histogram as PNG
+  ggsave(filename = paste0(output_folder, "/", var, "_histogram.png"), 
+         plot = p_hist, width = 7, height = 5)
+}
+
+```
+
+
+`
+
+```{r}
+# Task 8.2 Categorical variables
+for (var in categorical_vars) {
+  
+
+  var_name_print <- gsub("`", "", var)
+  
+  # Frequency table 
+  freq_table <- table(data_clean[[var_name_print]])
+  prop_table <- round(prop.table(freq_table) * 100, 1)
+  
+  cat("==============================\n")
+  cat("Variable:", var_name_print, "\n")
+  cat("Frequencies:\n")
+  for (i in seq_along(freq_table)) {
+    cat(names(freq_table)[i], ":", freq_table[i], 
+        "|", prop_table[i], "%\n")
+  }
+  
+  # Bar plot: 
+  p_bar <- ggplot(data_clean, aes_string(x = paste0("`", var_name_print, "`"))) +
+    geom_bar(fill = "orange", na.rm = TRUE) +
+    theme_minimal() +
+    labs(title = paste("Frequency of", var_name_print), x = var_name_print, y = "Count")
+  
+  # Save bar plot as PNG
+  ggsave(filename = paste0(output_folder, "/", var_name_print, "_barplot.png"), 
+         plot = p_bar, width = 7, height = 5)
+}
+
+```
+
+```{r}
+# Task 9.1: Exam_Score vs Continuous Variables
+for (var in continuous_vars) {
+  
+  cat("==============================\n")
+  cat("Exam_Score vs", var, "\n")
+  
+  # Summary statistics
+  summary_stats <- data_clean %>%
+    summarise(
+      Mean_X = mean(.data[[var]], na.rm = TRUE),
+      Median_X = median(.data[[var]], na.rm = TRUE),
+      SD_X = sd(.data[[var]], na.rm = TRUE),
+      Min_X = min(.data[[var]], na.rm = TRUE),
+      Max_X = max(.data[[var]], na.rm = TRUE),
+      Mean_Exam = mean(Exam_Score, na.rm = TRUE),
+      Median_Exam = median(Exam_Score, na.rm = TRUE)
+    )
+  
+  cat("Variable stats - Mean:", round(summary_stats$Mean_X,2), 
+      "| Median:", round(summary_stats$Median_X,2), 
+      "| SD:", round(summary_stats$SD_X,2), 
+      "| Min:", summary_stats$Min_X, 
+      "| Max:", summary_stats$Max_X, "\n")
+  
+  # Scatter plot with regression line
+  p_scatter <- ggplot(data_clean, aes_string(x = var, y = "Exam_Score")) +
+    geom_point(alpha = 0.6, color = "steelblue") +
+    geom_smooth(method = "lm", se = TRUE, color = "red") +
+    theme_minimal() +
+    labs(title = paste("Exam_Score vs", var),
+         x = var, y = "Exam_Score")
+  
+  # Save plot
+  ggsave(filename = paste0(output_folder, "/Exam_Score_vs_", var, "_scatter.png"),
+         plot = p_scatter, width = 7, height = 5)
+}
+
+```
+
+
+```{r}
+# Task 9.2: Exam_Score vs Categorical Variables
+for (var in categorical_vars) {
+  
+  # Clean variable name for printing
+  var_name_print <- gsub("`", "", var)
+  
+  # Frequency check: skip variables with only one level
+  if(length(unique(data_clean[[var_name_print]])) < 2) {
+    cat("==============================\n")
+    cat("Skipping", var_name_print, "- not enough levels to plot.\n")
+    next
+  }
+  
+  cat("==============================\n")
+  cat("Exam_Score vs", var_name_print, "\n")
+  
+  # Summary table: mean and median Exam_Score per category
+  summary_table <- data_clean %>%
+    group_by(.data[[var_name_print]]) %>%
+    summarise(
+      Mean_Exam = mean(Exam_Score, na.rm = TRUE),
+      Median_Exam = median(Exam_Score, na.rm = TRUE),
+      Count = n()
+    )
+  print(summary_table)
+  
+  # Boxplot: handle spaces in variable names with backticks
+  p_box <- ggplot(data_clean, aes_string(x = paste0("`", var_name_print, "`"), y = "Exam_Score")) +
+    geom_boxplot(fill = "orange") +
+    theme_minimal() +
+    labs(title = paste("Exam_Score vs", var_name_print),
+         x = var_name_print, y = "Exam_Score")
+  
+  # Save plot
+  ggsave(filename = paste0(output_folder, "/Exam_Score_vs_", var_name_print, "_boxplot.png"),
+         plot = p_box, width = 7, height = 5)
+}
+
+```
+
+`
+```{r}
+# Task 9.3: Continuous variables correlations
+library(ggplot2)
+library(dplyr)
+
+# Select continuous variables
+cont_data <- data_clean[continuous_vars]
+
+# Compute correlation matrix
+cor_matrix <- cor(cont_data, use = "complete.obs")
+print(round(cor_matrix, 2))
+
+write.csv(round(cor_matrix, 2), 
+          file = "C:/Users/Thinkpad/Desktop/final project/continuous_variables_correlation_matrix.csv",
+          row.names = TRUE)
+
+# Scatterplot matrix
+png(filename = "C:/Users/Thinkpad/Desktop/final project/continuous_variables_pairs.png",
+    width = 1200, height = 1200)
+pairs(cont_data,
+      main = "Scatterplot Matrix of Continuous Variables",
+      pch = 19,
+      col = rgb(0.2, 0.4, 0.6, 0.5))
+dev.off()
+
+```
+```{r}
+# Task 9.4: Categorical variables contingency tables
+output_folder <- "C:/Users/Thinkpad/Desktop/final project"
+
+for (i in 1:(length(categorical_vars)-1)) {
+  for (j in (i+1):length(categorical_vars)) {
+    
+    var1 <- gsub("`", "", categorical_vars[i])
+    var2 <- gsub("`", "", categorical_vars[j])
+    
+    # Create contingency table
+    cont_table <- table(data_clean[[var1]], data_clean[[var2]])
+    
+    # Print summary
+    cat("==============================\n")
+    cat("Contingency Table:", var1, "vs", var2, "\n")
+    print(cont_table)
+    
+    # Save as CSV
+    file_name <- paste0(output_folder, "/", var1, "_vs_", var2, "_contingency.csv")
+    write.csv(cont_table, file = file_name, row.names = TRUE)
+  }
+}
+
+```
+
+```{r}
+#task 10
+library(ggplot2)
+library(dplyr)
+
+# Selected variables
+cont_vars <- c("Sleep_Hours", "Hours_Studied")
+cat_vars <- c("Teacher_Quality", "Family_Income")
+
+# Create folder to save plots and CSVs
+output_folder <- "C:/Users/Thinkpad/Desktop/final project/Task10"
+if(!dir.exists(output_folder)) dir.create(output_folder)
+```
+
+
+```{r}
+# -------------------------------
+# 1. Continuous vs Continuous
+# -------------------------------
+p_cont <- ggplot(data_clean, aes(x = Sleep_Hours, y = Hours_Studied)) +
+  geom_point(alpha = 0.5, na.rm = TRUE) +
+  geom_smooth(method = "lm", col = "red") +
+  labs(title = "Sleep_Hours vs Hours_Studied",
+       x = "Sleep Hours",
+       y = "Hours Studied") +
+  theme_minimal()
+
+ggsave(filename = paste0(output_folder, "/Sleep_vs_Hours.png"),
+       plot = p_cont, width = 6, height = 4)
+
+cor_value <- round(cor(data_clean$Sleep_Hours, data_clean$Hours_Studied, use = "complete.obs"), 2)
+cat("Correlation between Sleep_Hours and Hours_Studied:", cor_value, "\n\n")
+
+# Save correlation to CSV
+write.csv(data.frame(Var1="Sleep_Hours", Var2="Hours_Studied", Correlation=cor_value),
+          paste0(output_folder, "/Sleep_vs_Hours_correlation.csv"), row.names = FALSE)
+```
+
+
+```{r}
+# 2. Continuous vs Categorical
+# -------------------------------
+for(cvar in cat_vars){
+  for(contvar in cont_vars){
+    
+    # Boxplot
+    p <- ggplot(data_clean, aes_string(x = cvar, y = contvar)) +
+      geom_boxplot(fill = "skyblue") +
+      labs(title = paste(contvar, "by", cvar)) +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    
+    # Save plot
+    file_name <- paste0(output_folder, "/", gsub(" ", "_", contvar),
+                        "_by_", gsub(" ", "_", cvar), ".png")
+    ggsave(filename = file_name, plot = p, width = 6, height = 4)
+    
+    # Summary statistics
+    summary_stats <- data_clean %>%
+      group_by(.data[[cvar]]) %>%
+      summarise(
+        Mean = mean(.data[[contvar]], na.rm = TRUE),
+        Median = median(.data[[contvar]], na.rm = TRUE),
+        SD = sd(.data[[contvar]], na.rm = TRUE),
+        Min = min(.data[[contvar]], na.rm = TRUE),
+        Max = max(.data[[contvar]], na.rm = TRUE)
+      )
+    
+    # Save summary as CSV
+    csv_name <- paste0(output_folder, "/", gsub(" ", "_", contvar),
+                       "_by_", gsub(" ", "_", cvar), "_summary.csv")
+    write.csv(summary_stats, csv_name, row.names = FALSE)
+    
+    # Print summary to console
+    cat("Summary of", contvar, "by", cvar, ":\n")
+    print(summary_stats)
+    cat("\n")
+  }
+}
+```
+
+```{r}
+# 3. Categorical vs Categorical
+# -------------------------------
+for(i in 1:(length(cat_vars)-1)){
+  for(j in (i+1):length(cat_vars)){
+    
+    # Contingency table
+    table_ij <- table(data_clean[[cat_vars[i]]], data_clean[[cat_vars[j]]])
+    cat("Contingency table:", cat_vars[i], "vs", cat_vars[j], "\n")
+    print(table_ij)
+    
+    # Save contingency table as CSV
+    df_table <- as.data.frame(table_ij)
+    colnames(df_table) <- c("Var1", "Var2", "Freq")
+    csv_name <- paste0(output_folder, "/", gsub(" ", "_", cat_vars[i]),
+                       "_vs_", gsub(" ", "_", cat_vars[j]), "_contingency.csv")
+    write.csv(df_table, csv_name, row.names = FALSE)
+    
+    # Bar plot
+    p <- ggplot(df_table, aes(x = Var1, y = Freq, fill = Var2)) +
+      geom_bar(stat = "identity", position = "dodge") +
+      labs(title = paste(cat_vars[i], "vs", cat_vars[j]),
+           x = cat_vars[i],
+           fill = cat_vars[j]) +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    
+    # Save plot
+    plot_name <- paste0(output_folder, "/", gsub(" ", "_", cat_vars[i]),
+                        "_vs_", gsub(" ", "_", cat_vars[j]), ".png")
+    ggsave(plot_name, p, width = 6, height = 4)
+  }
+}
+```
+
+```{r}
+#task 12
+install.packages("MASS")   # Install the package
+library(MASS)              # Load it into your session
+```
+
+```{r}
+library(MASS)
+
+# Select all continuous variables except Exam_Score
+cont_vars_for_model <- c("Age", "Absences", "Hours_Studied", "Attendance",
+                         "Siblings", "Physical_Activity", "Sleep_Hours",
+                         "Previous_Scores", "Tutoring_Sessions")
+
+cat("Continuous variables retained for prediction:\n")
+print(cont_vars_for_model)
+
+# Full linear model with all continuous variables
+full_model <- lm(Exam_Score ~ ., data = data_clean[, c("Exam_Score", cont_vars_for_model)])
+
+# Stepwise selection based on AIC
+best_model <- stepAIC(full_model, direction = "both", trace = FALSE)
+
+cat("Selected variables by stepwise selection:\n")
+selected_vars <- names(best_model$coefficients)[-1]  # remove intercept
+print(selected_vars)
+
+# Rank explanatory power using absolute t-values
+t_values <- summary(best_model)$coefficients[-1, "t value"]  # exclude intercept
+ranked_vars <- names(sort(abs(t_values), decreasing = TRUE))
+cat("Ranked variables (most explanatory first):\n")
+print(ranked_vars)
+
+# Retain top 3 explanatory variables
+top3_vars <- ranked_vars[1:3]
+cat("Top 3 explanatory continuous variables:\n")
+print(top3_vars)
+
+# Formula of the final model
+final_model_formula <- as.formula(paste("Exam_Score ~", paste(top3_vars, collapse = " + ")))
+model_cont <- lm(final_model_formula, data = data_clean)
+summary(model_cont)
+```
+
+```{r}
+
+#task 13
+cat_vars_for_model <- categorical_vars
+p_values <- c()
+
+for (var in cat_vars_for_model) {
+  formula_i <- as.formula(paste("Exam_Score ~", var))
+  model_i <- lm(formula_i, data = data_clean)
+  anova_i <- anova(model_i)
+  p_val <- anova_i$`Pr(>F)`[1]  # p-value for the variable
+  p_values[var] <- p_val
+}
+
+cat_pvalues_df <- data.frame(
+  Variable = names(p_values),
+  P_value = round(p_values, 5),
+  Meaningful = ifelse(p_values < 0.05, TRUE, FALSE)
+)
+
+cat("All categorical variables with p-values:\n")
+print(cat_pvalues_df)
+
+# 4. Retain only meaningful variables
+meaningful_vars <- cat_pvalues_df$Variable[cat_pvalues_df$Meaningful]
+
+# 5. Rank meaningful variables by ascending p-value (most explanatory first)
+top3_vars <- meaningful_vars[order(p_values[meaningful_vars])][1:3]
+
+cat("\nTop 3 explanatory categorical variables (lowest p-values):\n")
+for (var in top3_vars) {
+  cat(var, "- p-value:", round(p_values[var], 5), "\n")
+}
+
+write.csv(cat_pvalues_df, "C:/Users/Thinkpad/Desktop/final project/categorical_variables_pvalues.csv",
+          row.names = FALSE)
+# Build fitted model using top 3 categorical variables
+# -------------------------------
+final_cat_formula <- as.formula(paste("Exam_Score ~", paste(top3_vars, collapse = " + ")))
+model_cat <- lm(final_cat_formula, data = data_clean)
+
+# Show model summary
+cat("\nFitted model using top 3 categorical variables:\n")
+summary(model_cat)
+
+```
+
+```{r}
+#Task 14
+# homoegeneity fo categorical data
+cat_results <- data.frame(
+  Variable = character(),
+  Level = character(),
+  Train_Count = numeric(),
+  Train_Prop = numeric(),
+  Test_Count = numeric(),
+  Test_Prop = numeric(),
+  stringsAsFactors = FALSE
+)
+
+for(var in categorical_vars){
+  counts_train <- table(data.train[[var]])
+  counts_test  <- table(data.test[[var]])
+  
+  # Make sure all levels appear in both
+  all_levels <- union(names(counts_train), names(counts_test))
+  
+  # Skip variable if there are no levels
+  if(length(all_levels) == 0) next
+  
+  counts_train <- counts_train[all_levels]; counts_train[is.na(counts_train)] <- 0
+  counts_test  <- counts_test[all_levels]; counts_test[is.na(counts_test)] <- 0
+  
+  # Compute proportions
+  prop_train <- counts_train / sum(counts_train)
+  prop_test  <- counts_test  / sum(counts_test)
+  
+  # Store results
+  cat_results <- rbind(
+    cat_results,
+    data.frame(
+      Variable = var,
+      Level = all_levels,
+      Train_Count = as.numeric(counts_train),
+      Train_Prop = as.numeric(prop_train),
+      Test_Count = as.numeric(counts_test),
+      Test_Prop = as.numeric(prop_test),
+      stringsAsFactors = FALSE
+    )
+  )
+}
+
+# View table
+print(cat_results)
+```
+
+```{r}
+#Homogeneoty check for continuous variables
+continuous_vars <- c("Age", "Absences", "Hours_Studied", "Attendance", 
+                     "Siblings", "Physical_Activity",
+                     "Sleep_Hours", "Previous_Scores",
+                     "Tutoring_Sessions", "Exam_Score")
+
+cat("Homogeneity check for continuous variables:\n\n")
+
+for(var in continuous_vars){
+  mean_train <- mean(data.train[[var]], na.rm = TRUE)
+  mean_test  <- mean(data.test[[var]], na.rm = TRUE)
+  sd_train   <- sd(data.train[[var]], na.rm = TRUE)
+  sd_test    <- sd(data.test[[var]], na.rm = TRUE)
+  
+  cat(var, ":\n")
+  cat("  Train mean:", round(mean_train,2), ", SD:", round(sd_train,2), "\n")
+  cat("  Test mean :", round(mean_test,2), ", SD:", round(sd_test,2), "\n\n")
+}
+  
+```
+```{r}
+#summary
+summary(data.train$Exam_Score); summary(data.test$Exam_Score)
+```
+
+```{r}
+# Selected continuous variables (from previous analysis, e.g., task 12)
+selected_cont_vars <- c("Attendance", "Hours_Studied", "Previous_Scores")
+
+# Selected categorical variables (from task 13 top 3)
+selected_cat_vars <- c("Access_to_Resources", "Parental_Involvement", "Parental_Education_Level")
+
+```
+
+```{r}
+# Continuous-only formula
+cont_formula <- as.formula(
+  paste("Exam_Score ~", paste(selected_cont_vars, collapse = " + "))
+)
+
+# Categorical-only formula
+cat_formula <- as.formula(
+  paste("Exam_Score ~", paste(selected_cat_vars, collapse = " + "))
+)
+
+# Combined formula
+combined_formula <- as.formula(
+  paste("Exam_Score ~", paste(c(selected_cont_vars, selected_cat_vars), collapse = " + "))
+)
+
+```
+
+```{r}
+# Continuous-only model
+model_cont <- lm(cont_formula, data = data.train)
+
+# Categorical-only model
+model_cat <- lm(cat_formula, data = data.train)
+
+# Combined model
+model_combined <- lm(combined_formula, data = data.train)
+```
+
+
+```{r}
+install.packages("Metrics")
+library(Metrics)
+
+# Function to evaluate model
+evaluate_model <- function(model, data, name="Model") {
+  pred <- predict(model, newdata = data)
+  r2 <- summary(model)$r.squared
+  rmse_val <- rmse(data$Exam_Score, pred)
+  cat(name, "\n")
+  cat("  R² (train):", round(r2, 4), "\n")
+  cat("  RMSE (train):", round(rmse_val, 4), "\n\n")
+  return(list(R2=r2, RMSE=rmse_val))
+}
+
+# Evaluate on training data
+train_cont <- evaluate_model(model_cont, data.train, "Continuous-only model")
+train_cat <- evaluate_model(model_cat, data.train, "Categorical-only model")
+train_comb <- evaluate_model(model_combined, data.train, "Combined model")
+
+# Evaluate on test data
+test_cont <- evaluate_model(model_cont, data.test, "Continuous-only model (test)")
+test_cat <- evaluate_model(model_cat, data.test, "Categorical-only model (test)")
+test_comb <- evaluate_model(model_combined, data.test, "Combined model (test)")
+
+```
+```{r}
+library(caret) # for RMSE
+
+# Function to evaluate a model on any dataset
+evaluate_model <- function(model, data, name="Model") {
+  pred <- predict(model, newdata = data)
+  rmse_val <- RMSE(pred, data$Exam_Score)
+  
+  # R² calculation for given data
+  ss_total <- sum((data$Exam_Score - mean(data$Exam_Score))^2)
+  ss_res   <- sum((data$Exam_Score - pred)^2)
+  r2_val   <- 1 - ss_res / ss_total
+  
+  return(list(R2=r2_val, RMSE=rmse_val))
+}
+
+# Evaluate all models on train and test sets
+results <- data.frame(
+  Model = character(),
+  Dataset = character(),
+  R2 = numeric(),
+  RMSE = numeric(),
+  stringsAsFactors = FALSE
+)
+
+models <- list(
+  "Continuous" = model_cont,
+  "Categorical" = model_cat,
+  "Combined" = model_combined
+)
+
+for(m in names(models)) {
+  # Train evaluation
+  train_eval <- evaluate_model(models[[m]], data.train)
+  results <- rbind(results,
+                   data.frame(Model=m, Dataset="Train", R2=train_eval$R2, RMSE=train_eval$RMSE))
+  
+  # Test evaluation
+  test_eval <- evaluate_model(models[[m]], data.test)
+  results <- rbind(results,
+                   data.frame(Model=m, Dataset="Test", R2=test_eval$R2, RMSE=test_eval$RMSE))
+}
+
+# Print nicely
+print(results)
+```
+
+
+```{r}
+#task 15
+# 1. Selected variables
+selected_cont_vars <- c("Attendance", "Hours_Studied", "Previous_Scores")
+selected_cat_vars  <- c("Access_to_Resources", "Parental_Involvement", "Parental_Education_Level")
+
+# 2. Formulas
+cont_formula <- as.formula(paste("Exam_Score ~", paste(selected_cont_vars, collapse = " + ")))
+cat_formula  <- as.formula(paste("Exam_Score ~", paste(selected_cat_vars, collapse = " + ")))
+combined_formula <- as.formula(paste("Exam_Score ~", paste(c(selected_cont_vars, selected_cat_vars), collapse = " + ")))
+
+# 3. Fit models on training data
+model_cont <- lm(cont_formula, data = data.train)
+model_cat  <- lm(cat_formula, data = data.train)
+model_combined <- lm(combined_formula, data = data.train)
+
+# 4. Evaluation function
+library(caret)
+
+evaluate_model <- function(model, data) {
+  pred <- predict(model, newdata = data)
+  
+  # R²
+  ss_total <- sum((data$Exam_Score - mean(data$Exam_Score))^2)
+  ss_res   <- sum((data$Exam_Score - pred)^2)
+  r2_val   <- 1 - ss_res / ss_total
+  
+  # RMSE
+  rmse_val <- RMSE(pred, data$Exam_Score)
+  
+  return(list(R2 = r2_val, RMSE = rmse_val))
+}
+
+# 5. Evaluate all models
+models <- list(
+  "Continuous" = model_cont,
+  "Categorical" = model_cat,
+  "Combined" = model_combined
+)
+
+results <- data.frame(Model = character(), Dataset = character(), R2 = numeric(), RMSE = numeric(), stringsAsFactors = FALSE)
+
+for(m in names(models)) {
+  train_eval <- evaluate_model(models[[m]], data.train)
+  test_eval  <- evaluate_model(models[[m]], data.test)
+  
+  results <- rbind(results,
+                   data.frame(Model = m, Dataset = "Train", R2 = train_eval$R2, RMSE = train_eval$RMSE),
+                   data.frame(Model = m, Dataset = "Test",  R2 = test_eval$R2,  RMSE = test_eval$RMSE))
+}
+
+# 6. Print results
+print(results)
+
+```
+```{r}
+summary(model_combined)
+```
+
+
+```{r}
+#task 16
+# Residuals of combined model
+residuals_comb <- residuals(model_combined)
+
+# Histogram
+hist(residuals_comb, breaks = 30, main = "Residuals Histogram", xlab = "Residuals")
+
+# Q-Q plot
+qqnorm(residuals_comb)
+qqline(residuals_comb, col = "red")
+```
+
+
+
+
+```{r}
+#task 17
+# Suppose your original data had a column called StudentID
+# Add it back to your cleaned dataset
+data_clean$StudentID <- data$StudentID  # data is your original dataset
+# Use the combined model to predict
+data_clean$Predicted_Score <- predict(model_combined, newdata = data_clean)
+data_clean$Average_Score <- (data_clean$Exam_Score + data_clean$Predicted_Score) / 2
+top_10 <- data_clean %>%
+  dplyr::arrange(desc(Average_Score)) %>%
+  dplyr::select(StudentID, Exam_Score, Predicted_Score, Average_Score) %>%
+  head(10)
+
+print(top_10)
+
+
+
+```
+
